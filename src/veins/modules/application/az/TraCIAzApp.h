@@ -45,16 +45,18 @@ class TraCIAzApp : public BaseWaveApplLayer  {
 	protected:
         TraCIScenarioManager* manager;
         simtime_t lastDroveAt;
-        //bool forwardCF;
-        bool existCf; //variable to verify if exist CF when vehicle enter in a AZ selected
-        bool enterAZSelected; //MUDAR PARA NR DA AZ PARA EVITAR PROBLEMA QUANDO AZs PROXIMAS
+
         double currentAzSelected;
+        double AzIdOfWsm; //Anchor Zone ID of Float Content saved
+        WaveShortMessage* wsmFC;
+
 
 	protected:
         virtual void initialize(int stage);
         virtual void handlePositionUpdate(cObject* obj);
         virtual void onWSM(WaveShortMessage* wsm);
         virtual double getAzId(Coord currentPosition);
+        virtual void finish();
 
 
 

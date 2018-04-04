@@ -295,7 +295,7 @@ void TraCIScenarioManager::initialize(int stage) {
     currentFloatContent.setName("floatContent");
     currentFcForwarded.setName("fcForwarded");
 
-
+    existCFFirst = false; //M@ssa FIRST
 
 
 	nextNodeVectorIndex = 0;
@@ -1034,3 +1034,27 @@ bool TraCIScenarioManager::isSelectedAz(double azId) {
     return false;
 
 }
+
+bool TraCIScenarioManager::getExistCFinAZ(double azId){
+
+    if (AZsWithCF.find(azId) != AZsWithCF.end()){
+        return true;
+    }
+    else{
+        return false;
+    }
+
+
+
+}
+
+void TraCIScenarioManager::setExistCFinAZ(double azId){
+
+    if (AZsWithCF.find(azId) == AZsWithCF.end()){
+        AZsWithCF.insert(azId);
+    }
+
+}
+
+
+

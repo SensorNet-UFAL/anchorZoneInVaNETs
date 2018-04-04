@@ -88,6 +88,14 @@ class TraCIScenarioManager : public cSimpleModule
 		virtual void finish();
 		virtual void handleMessage(cMessage *msg);
 		virtual void handleSelfMsg(cMessage *msg);
+		//by M@ssa
+		virtual bool getExistCFinAZ(double azId);
+		virtual void setExistCFinAZ(double azId);
+
+
+		virtual bool getFloatingContent() { return existCFFirst; }
+		virtual void setFloatingContent(bool cf) { existCFFirst = cf; }
+
 
 		bool isConnected() const { return (connection); }
 
@@ -134,7 +142,10 @@ class TraCIScenarioManager : public cSimpleModule
 		int vehicleRngIndex;
 		int numVehicles;
 
+		bool existCFFirst;
 
+
+		std::set<double> AZsWithCF;
         //by M@ssa
         //double azId;
 

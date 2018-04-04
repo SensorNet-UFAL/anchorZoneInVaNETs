@@ -38,10 +38,8 @@ void TraCIAzApp::initialize(int stage) {
     BaseApplLayer::initialize(stage);
 
     lastDroveAt = simTime();
-    //forwardCF = false;
-    existCf = false;
-    enterAZSelected = false;
     currentAzSelected = 0;
+    AzIdOfWsm = 0;
 
     if (stage==0) {
 
@@ -96,6 +94,9 @@ void TraCIAzApp::initialize(int stage) {
         receivedBSMs = 0;
         receivedWSAs = 0;
         receivedWSMs = 0;
+
+        //quantityVehicles = 0;
+
     }
     else if (stage == 1) {
         //simulate asynchronous channel access
@@ -141,36 +142,32 @@ void TraCIAzApp::handlePositionUpdate(cObject* obj) {
 
     if(manager->isSelectedAz( azId )){
             traciVehicle->setColor(TraCIColor::fromTkColor("DarkRed"));
-
+            //TESTE - Verifica se estou na AZ selecionada que estava no ultimo instante
             if (currentAzSelected != azId){
                 currentAzSelected = azId;
-                existCf = false;
                 mobility->currentAnchorZone.recordWithTimestamp(simTime(), azId);
             }
-
-            if (enterAZSelected == false){
-                lastDroveAt = simTime();
-                enterAZSelected = true;
+            if (manager->getExistCFinAZ(azId) == false){
+                //WaveShortMessage* wsm = new WaveShortMessage();
+                wsmFC = new WaveShortMessage();
+                populateWSM(wsmFC);
+                wsmFC->setAz( azId );
+                wsmFC->setWsmData(mobility->getRoadId().c_str());
+                sendDown(wsmFC);
+               // AzIdOfWsm = azId;
             }
-
-            if ( (simTime() - lastDroveAt >= 2 ) && (existCf == false) )  { //wait for 2sec to send firstMessage
-                existCf = true;
-                WaveShortMessage* wsm = new WaveShortMessage();
-
-                populateWSM(wsm);
-                wsm->setAz( azId );
-                wsm->setWsmData(mobility->getRoadId().c_str());
-
-                sendDown(wsm);
-                lastDroveAt = simTime();
+            else{
+                if (AzIdOfWsm == azId){
+                    WaveShortMessage* forwardWsm = new WaveShortMessage(*wsmFC);
+                    forwardWsm->setWsmVersion(wsmFC->getWsmVersion() + 1);
+                    sendDelayedDown(forwardWsm, 3);
+                    manager->currentFloatContent.recordWithTimestamp(simTime(), azId );
+                    manager->currentFcForwarded.recordWithTimestamp(simTime(), forwardWsm->getWsmVersion() );
+                }
             }
-
     }
     else{
             traciVehicle->setColor(TraCIColor::fromTkColor("DarkGreen"));
-            if (enterAZSelected == true){
-                enterAZSelected = false;
-            }
     }
 }
 
@@ -180,23 +177,20 @@ void TraCIAzApp::onWSM(WaveShortMessage* wsm) {
     azIdMessage = wsm->getAz();
     azIdVehicle = traciVehicle->getAzId();
 
-     if (azIdMessage == azIdVehicle){
-         receivedWSMs++;
-
-         //if ( (simTime() != lastDroveAt) && (forwardCF == false) ){
-         //if ( (simTime() - lastDroveAt) > 0.001) {
-         if ( (simTime() - lastDroveAt) > 1) { //wait for 1sec for send same message
-             WaveShortMessage* forwardWsm = new WaveShortMessage(*wsm);
-             std::string tempo =  simTime().str();
-             forwardWsm->setSenderAddress(myId);
-             forwardWsm->setWsmVersion(forwardWsm->getWsmVersion() + 1);
-             sendDown(forwardWsm); //forward the message
-             existCf = true;
-             manager->currentFloatContent.recordWithTimestamp(simTime(), azIdMessage );
-             manager->currentFcForwarded.recordWithTimestamp(simTime(), forwardWsm->getWsmVersion() );
-             lastDroveAt = simTime();
-         }
-     }
+    if (azIdMessage == azIdVehicle){
+        receivedWSMs++;
+        if (azIdVehicle != AzIdOfWsm){
+            manager->setExistCFinAZ(azIdMessage);
+            wsmFC = new WaveShortMessage(*wsm);
+            wsmFC->setSenderAddress(myId);
+            wsmFC->setWsmVersion(wsm->getWsmVersion() + 1);
+            WaveShortMessage* forwardWsm = new WaveShortMessage(*wsmFC);
+            sendDelayedDown(forwardWsm, 3);
+            manager->currentFloatContent.recordWithTimestamp(simTime(), azIdMessage );
+            manager->currentFcForwarded.recordWithTimestamp(simTime(), forwardWsm->getWsmVersion() );
+            AzIdOfWsm = azIdMessage;
+       }
+    }
 };
 
 
@@ -210,5 +204,18 @@ double TraCIAzApp::getAzId(Coord currentPosition){
     int column = ( ( 122.1015 + LonLat.first ) / 0.002265394 ); //0-49 columns
     double az_id =  (line * 100) + column;
     return(az_id);
+
+}
+
+void TraCIAzApp::finish(){
+    //recordScalar("quantityVehicles",quantityVehicles);
+
+    recordScalar("generatedWSMs",generatedWSMs);
+    recordScalar("receivedWSMs",receivedWSMs);
+
+    recordScalar("generatedBSMs",generatedBSMs);
+    recordScalar("receivedBSMs",receivedBSMs);
+
+
 
 }
