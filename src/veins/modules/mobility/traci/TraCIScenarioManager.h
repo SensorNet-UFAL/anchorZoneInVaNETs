@@ -119,6 +119,7 @@ class TraCIScenarioManager : public cSimpleModule
         //double getAzId();
         //void setAzId(Coord nodeCoord);
         bool isSelectedAz(double azId);
+        uint32_t nodesReceivedCF; //by M@ssa - quantities of vehicles that received CF
 
 	protected:
 		bool debug; /**< whether to emit debug messages */

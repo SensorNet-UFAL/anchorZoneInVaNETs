@@ -292,8 +292,9 @@ void TraCIScenarioManager::initialize(int stage) {
     while (std::getline(roiAz_i, az, ' ')) {
         roiAzs.push_back(az);
     }
-    currentFloatContent.setName("floatContent");
+    currentFloatContent.setName("floatingContent");
     currentFcForwarded.setName("fcForwarded");
+    nodesReceivedCF = 0;
 
     existCFFirst = false; //M@ssa FIRST
 
@@ -408,6 +409,8 @@ void TraCIScenarioManager::init_traci() {
 void TraCIScenarioManager::finish() {
 	if (connection) {
 		TraCIBuffer buf = connection->query(CMD_CLOSE, TraCIBuffer());
+		//by M@ssa
+		 recordScalar("nodesReceivedCF",nodesReceivedCF);
 	}
 	while (hosts.begin() != hosts.end()) {
 		deleteManagedModule(hosts.begin()->first);

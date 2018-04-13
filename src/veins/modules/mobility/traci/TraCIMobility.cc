@@ -78,14 +78,16 @@ void TraCIMobility::initialize(int stage)
 		debug = par("debug");
 		antennaPositionOffset = par("antennaPositionOffset");
 		accidentCount = par("accidentCount");
-
+		/*TEMP - comment statistics doesnt important
 		currentPosXVec.setName("posx");
 		currentPosYVec.setName("posy");
 		currentSpeedVec.setName("speed");
 		currentAccelerationVec.setName("acceleration");
-		currentCO2EmissionVec.setName("co2emission");
+		currentCO2EmissionVec.setName("co2emission"); */
 
 		currentAnchorZone.setName("anchorZone");
+		currentFloatContent.setName("floatContent");
+
 
 		statistics.initialize();
 		statistics.watch(*this);
@@ -198,8 +200,9 @@ void TraCIMobility::changePosition()
 	ASSERT(lastUpdate != simTime());
 
 	// keep statistics (for current step)
+	/*TEMP
 	currentPosXVec.record(move.getStartPos().x);
-	currentPosYVec.record(move.getStartPos().y);
+	currentPosYVec.record(move.getStartPos().y);*/
 
 	Coord nextPos = calculateAntennaPosition(roadPosition);
 	nextPos.z = move.getCurrentPosition().z;
@@ -214,12 +217,14 @@ void TraCIMobility::changePosition()
 		if (speed != -1) {
 			statistics.minSpeed = std::min(statistics.minSpeed, speed);
 			statistics.maxSpeed = std::max(statistics.maxSpeed, speed);
-			currentSpeedVec.record(speed);
+
+			//currentSpeedVec.record(speed);
 			if (last_speed != -1) {
 				double acceleration = (speed - last_speed) / updateInterval;
 				double co2emission = calculateCO2emission(speed, acceleration);
+				/*TEMP
 				currentAccelerationVec.record(acceleration);
-				currentCO2EmissionVec.record(co2emission);
+				currentCO2EmissionVec.record(co2emission); */
 				statistics.totalCO2Emission+=co2emission * updateInterval.dbl();
 			}
 			last_speed = speed;

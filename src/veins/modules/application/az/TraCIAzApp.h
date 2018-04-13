@@ -47,7 +47,7 @@ class TraCIAzApp : public BaseWaveApplLayer  {
         simtime_t lastDroveAt;
 
         double currentAzSelected;
-        double AzIdOfWsm; //Anchor Zone ID of Float Content saved
+        double azIdOfWsm; //Anchor Zone ID of Float Content saved
         WaveShortMessage* wsmFC;
 
 

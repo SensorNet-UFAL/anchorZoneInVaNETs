@@ -131,6 +131,7 @@ class TraCIMobility : public BaseMobility
 
 
 		cOutVector currentAnchorZone; //by M@ssa - AZ where vehicle is travel
+		cOutVector currentFloatContent; //by M@ssa - ID of CF which vehicle are floating
 
 	protected:
 		bool debug; /**< whether to emit debug messages */
