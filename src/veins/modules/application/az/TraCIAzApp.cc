@@ -136,37 +136,44 @@ void TraCIAzApp::handlePositionUpdate(cObject* obj) {
 
     manager = mobility->getManager();
 
-    double azId =  this->getAzId(curPosition);
+    double azId =  this->getAzId(curPosition, manager->getLatLongIni(), manager->getfactorXY(), manager->getdistmLong(), manager->getdistmLat());
+    double azIdSelected;
 
     traciVehicle->setAzId(azId);
 
     if(manager->isSelectedAz( azId )){
+
+            azIdSelected = manager->returnAzSelected(azId); //Caso ForwardAZ habilitado, retorna AZ principal
             //traciVehicle->setColor(TraCIColor::fromTkColor("DarkRed"));
             //TESTE - Verifica se estou na AZ selecionada que estava no ultimo instante
-            if (currentAzSelected != azId){
-                currentAzSelected = azId;
-                mobility->currentAnchorZone.recordWithTimestamp(simTime(), azId);
+            if (currentAzSelected != azIdSelected){
+                currentAzSelected = azIdSelected;
+                mobility->currentAnchorZone.recordWithTimestamp(simTime(), azIdSelected);
             }
-            if (manager->getExistCFinAZ(azId) == false){
-                //WaveShortMessage* wsm = new WaveShortMessage();
-                wsmFC = new WaveShortMessage();
+
+            if (manager->existFCinAZ(azIdSelected) == false){
+                WaveShortMessage* wsmFC = new WaveShortMessage();
                 populateWSM(wsmFC);
-                wsmFC->setAz( azId );
+                wsmFC->setAz( azIdSelected );
                 wsmFC->setWsmData(mobility->getRoadId().c_str());
                 //ID do CF: ID da AZ + sequencia a cada novo FC por AZ
-                mobility->currentFloatContent.recordWithTimestamp(simTime(), azId * 1000 + 1);
-
+                mobility->currentFloatContent.recordWithTimestamp(simTime(), azIdSelected);
                 sendDown(wsmFC);
-               // azIdOfWsm = azId;
+                azIdOfWsm = azIdSelected;
             }
             else{
-                if (azIdOfWsm == azId){
-                    WaveShortMessage* forwardWsm = new WaveShortMessage(*wsmFC);
-                    forwardWsm->setWsmVersion(wsmFC->getWsmVersion() + 1);
-                    sendDelayedDown(forwardWsm, 3);
-                    manager->currentFloatContent.recordWithTimestamp(simTime(), azId );
+                if (azIdOfWsm == azIdSelected){
+                    WaveShortMessage* forwardWsm = new WaveShortMessage(*manager->getExistFCinAZ(azIdSelected) );
+                    forwardWsm->setWsmVersion(forwardWsm->getWsmVersion() + 1);
+                    sendDelayedDown(forwardWsm, 1);
+                    //sendDown(forwardWsm);
+                    manager->currentFloatContent.recordWithTimestamp(simTime(), azIdSelected );
                     manager->currentFcForwarded.recordWithTimestamp(simTime(), forwardWsm->getWsmVersion() );
-                    mobility->currentFloatContent.recordWithTimestamp(simTime(), azId * 1000 + 1);
+                    mobility->currentFloatContent.recordWithTimestamp(simTime(), azIdSelected);
+                }
+		else{
+                    azIdOfWsm = 0; //teste
+
                 }
             }
     }
@@ -179,57 +186,53 @@ void TraCIAzApp::handlePositionUpdate(cObject* obj) {
 
 
 void TraCIAzApp::onWSM(WaveShortMessage* wsm) {
-    double azIdMessage, azIdVehicle;
-    azIdMessage = wsm->getAz();
-    azIdVehicle = traciVehicle->getAzId();
 
-    if (azIdMessage == azIdVehicle){
+    double azIdMessage = wsm->getAz();
+    double azIdVehicle =  manager->returnAzSelected( traciVehicle->getAzId() );
+
+    if (azIdMessage == azIdVehicle ){
         receivedWSMs++;
-        if (azIdVehicle != azIdOfWsm){
-            manager->setExistCFinAZ(azIdMessage);
-            wsmFC = new WaveShortMessage(*wsm);
-            wsmFC->setSenderAddress(myId);
-            wsmFC->setWsmVersion(wsm->getWsmVersion() + 1);
-            WaveShortMessage* forwardWsm = new WaveShortMessage(*wsmFC);
-            sendDelayedDown(forwardWsm, 3);
+        if (  azIdVehicle != azIdOfWsm){
+            WaveShortMessage* msg = new WaveShortMessage(*wsm);
+            msg->setSenderAddress(myId);
+            msg->setWsmVersion(wsm->getWsmVersion() + 1);
+            manager->setExistFCinAZ(azIdMessage, msg);
+            sendDelayedDown(msg, 1);
+            //sendDown(msg);
             manager->nodesReceivedCF++;
             manager->currentFloatContent.recordWithTimestamp(simTime(), azIdMessage );
-            manager->currentFcForwarded.recordWithTimestamp(simTime(), forwardWsm->getWsmVersion() );
-            mobility->currentFloatContent.recordWithTimestamp(simTime(), azIdMessage * 1000 + 1);
+            manager->currentFcForwarded.recordWithTimestamp(simTime(), msg->getWsmVersion() );
+            mobility->currentFloatContent.recordWithTimestamp(simTime(), azIdMessage);
             azIdOfWsm = azIdMessage;
-       }
+        }
+        //else{
+        //    azIdOfWsm = 0;
+        //}
     }
 };
 
 
-double TraCIAzApp::getAzId(Coord currentPosition){
+double TraCIAzApp::getAzId(Coord currentPosition, Coord positionGridIni, int factorXY, double distmLong, double distmLat){
 
     std::pair<double,double> LonLat;
+    int line, column;
+    double latIni = positionGridIni.y;
+    double longIni = positionGridIni.x;
 
     LonLat= traci->getLonLat(currentPosition);
+    line = ( (LonLat.second - latIni) / distmLat );
+    column = ( (LonLat.first - longIni) / distmLong );
 
-  //  mobile Century
-    int line = ( (LonLat.second - 37.52239) / 0.001796632 );  //0-74 lines
-    int column = ( ( 122.1015 + LonLat.first ) / 0.002265394 ); //0-49 columns
-    double az_id =  (line * 100) + column;
+    double az_id =  (line * factorXY) + column;
+
     return(az_id);
-
-
-    /*T-Drive*/
-    /*int line =   ( (LonLat.second - 39.3) / 0.001796632 );  //0-978 lines
-    int column = ( (LonLat.first  - 115.0093 ) / 0.002265394 ); //0-1320 columns
-    double az_id =  (line * 10000) + column;
-    return(az_id);
-*/
 
 }
 
 void TraCIAzApp::finish(){
     //recordScalar("quantityVehicles",quantityVehicles);
-
     recordScalar("generatedWSMs",generatedWSMs);
     recordScalar("receivedWSMs",receivedWSMs);
-
     recordScalar("generatedBSMs",generatedBSMs);
     recordScalar("receivedBSMs",receivedBSMs);
 

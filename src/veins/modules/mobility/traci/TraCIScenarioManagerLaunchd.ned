@@ -68,6 +68,13 @@ simple TraCIScenarioManagerLaunchd
         string roiRoads = default("");  // which roads (e.g. "hwy1 hwy2") are considered to consitute the region of interest, if not empty
         string roiRects = default("");  // which rectangles (e.g. "0,0-10,10 20,20-30,30) are considered to consitute the region of interest, if not empty. Note that these rectangles have to use TraCI (SUMO) coordinates and not OMNeT++. They can be easily read from sumo-gui.
         string roiAzs = default("");  // which Anchor Zone IDs are considered to disseminate Floating Content. - by M@ssa
+        double LatitudeIni = default(0); //by M@ssa - Latitude Initial of Grid
+        double LongitudeIni = default(0); //by M@ssa - Longitude Initial of Grid
+        double distmLong = default(0); //by M@ssa - Size of Width and Height of AZ       
+        double distmLat  = default(0); //by M@ssa - Size of Width and Height of Forwarded Zone
+        bool forwardZoneEnabled = default(false); //by M@ssa - If the Forward Zone is enabled or not        
+        int factorXY = default(10); //by M@ssa - Multiplier of X-Y - Example: 100 Y=42 X=12 AnchorZoneId = (42 * 100) + 12 = 4212
+        int timeFcCreated = default(1); //by M@ssa - many times in simulation that Floating Content will be created by AZ
         double penetrationRate = default(1); //the probability of a vehicle being equipped with Car2X technology
         int numVehicles = default(0);
         bool useRouteDistributions = default(false);

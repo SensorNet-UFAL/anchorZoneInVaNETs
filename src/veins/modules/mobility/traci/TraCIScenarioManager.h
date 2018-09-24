@@ -37,6 +37,7 @@
 #include "veins/modules/mobility/traci/TraCIConnection.h"
 #include "veins/modules/mobility/traci/TraCICoord.h"
 
+#include "veins/modules/messages/WaveShortMessage_m.h"  //by M@ssa
 /**
  * @brief
  * Creates and moves nodes controlled by a TraCI server.
@@ -89,8 +90,11 @@ class TraCIScenarioManager : public cSimpleModule
 		virtual void handleMessage(cMessage *msg);
 		virtual void handleSelfMsg(cMessage *msg);
 		//by M@ssa
-		virtual bool getExistCFinAZ(double azId);
-		virtual void setExistCFinAZ(double azId);
+		//virtual bool getExistFCinAZ(double azId);
+		virtual bool existFCinAZ(double azId);
+		virtual WaveShortMessage* getExistFCinAZ(double azId);
+		virtual void setExistFCinAZ(double azId,  WaveShortMessage *msg);
+		//virtual void setExistFCinAZ(double azId);
 
 
 		virtual bool getFloatingContent() { return existCFFirst; }
@@ -119,7 +123,13 @@ class TraCIScenarioManager : public cSimpleModule
         //double getAzId();
         //void setAzId(Coord nodeCoord);
         bool isSelectedAz(double azId);
+        double returnAzSelected(double azId);
         uint32_t nodesReceivedCF; //by M@ssa - quantities of vehicles that received CF
+        Coord getLatLongIni(); //by Massa
+
+        double getdistmLong(){return distmLong;}
+        double getdistmLat(){return distmLat;}
+        int getfactorXY(){return factorXY;}
 
 	protected:
 		bool debug; /**< whether to emit debug messages */
@@ -145,12 +155,14 @@ class TraCIScenarioManager : public cSimpleModule
 
 		bool existCFFirst;
 
+		std::set<double> AZsWithFC;
+		//std::set<WaveShortMessage*> listWsmFC;
+		std::map<double,WaveShortMessage*> listWsmFC;
 
-		std::set<double> AZsWithCF;
+
+
         //by M@ssa
         //double azId;
-
-
 		cRNG* mobRng;
 
 		bool autoShutdown; /**< Shutdown module as soon as no more vehicles are in the simulation */
@@ -160,6 +172,15 @@ class TraCIScenarioManager : public cSimpleModule
 		//by M@ssa
 		std::list<std::string> roiAzs; /**< which Anchor Zone (e.g. "0100 2010 300100") are considered to consitute the Anchor Zone selected for Floating Content, if not empty */
 
+        double LatitudeIni;  //by M@ssa
+        double LongitudeIni; //by M@ssa
+        double distmLong; //by M@ssa
+        double distmLat; //by M@ssa
+        bool forwardZoneEnabled; //by M@ssa
+        int factorXY; //by M@ssa - Multiplier of X-Y - Example: 100 Y=42 X=12 AnchorZoneId = (42 * 100) + 12 = 4212
+        int sim_time_limit; //By M@ssa - time limit of Simulation (sim-time-limit variable of omnettpp.ini
+        int timeFcCreated; //by M@ssa - many times in simulation that Floating Content will be created by AZ
+        int stageFcCreated; //by M@ssa
 
 
 		TraCIConnection* connection;

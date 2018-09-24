@@ -253,6 +253,16 @@ void TraCIScenarioManager::initialize(int stage) {
 
 	std::string roiAz_s = par("roiAzs");//by M@ssa
 
+	LatitudeIni = par("LatitudeIni");  //by M@ssa
+	LongitudeIni = par("LongitudeIni");  //by M@ssa
+	distmLong = par("distmLong");  //by M@ssa
+	distmLat = par("distmLat");  //by M@ssa
+	forwardZoneEnabled = par("forwardZoneEnabled");  //by M@ssa
+	factorXY = par("factorXY"); //by M@ssa
+	sim_time_limit = 18000; //By M@ssa - after import of sim-time-limit variable of omnettpp.ini
+	timeFcCreated = par("timeFcCreated"); //by M@ssa
+    stageFcCreated = 1;
+
 
 	vehicleNameCounter = 0;
 	vehicleRngIndex = par("vehicleRngIndex");
@@ -595,6 +605,15 @@ void TraCIScenarioManager::executeOneTimestep() {
 	}
 
 	if (!autoShutdownTriggered) scheduleAt(simTime()+updateInterval, executeOneTimestepTrigger);
+
+
+    //uint32_t i = simTime().dbl();
+
+    if (simTime().dbl() > (   (sim_time_limit / timeFcCreated ) * stageFcCreated ) ){
+        AZsWithFC.clear();
+        listWsmFC.clear();
+        stageFcCreated++;
+    }
 
 }
 
@@ -984,53 +1003,28 @@ void TraCIScenarioManager::processSubcriptionResult(TraCIBuffer& buf) {
 	}
 }
 
-/*double TraCIScenarioManager::getAzId() {
-
- return this->azId;
-}*/
-
-/*
-void TraCIScenarioManager::setAzId(Coord nodeCoord) {
-
-    //qtdAz = 4; Parameters sender to omnetpp.ini
-    //int qtdLines = 74;  int qtdColumns = 49; int minColumn = 0; int maxColumn = 9800;  int minLine = 0; int maxLine = 14800;
-    //int totSizeColumn = maxColumn - minColumn;    int totSizeLine = maxLine - minLine;
-
-    //grid size = x e e  105-(-5) = 110m x 110m
-    //each AZ will be 11m x 11m
-
-    int qtdLines = 2;  int qtdColumns = 2;
-    int minColumn = -5; int maxColumn = 105;
-    int minLine = -5; int maxLine = 105;
-    int totSizeColumn = maxColumn - minColumn;
-    int totSizeLine = maxLine - minLine;
-
-
-    TraCICoord trac =  connection->omnet2traci(nodeCoord);
-
-    double _azId;
-    int coordX = trac.x;
-    int coordY = trac.y;
-
-
-    int lineValue = coordY /  (totSizeLine / qtdLines) ;
-    int columnValue = (coordX / (totSizeColumn / qtdColumns) );
-
-    _azId = (lineValue *100) + columnValue;
-
-    this->azId = _azId;
-}*/
-
 bool TraCIScenarioManager::isSelectedAz(double azId) {
-    std::string azSelected;
+    //std::string azSelected;
+
+    double azSelected;
+
     if (roiAzs.size() == 0) return true;
 
     if (roiAzs.size() > 0) {
 
         for (std::list<std::string>::const_iterator i = roiAzs.begin(); i != roiAzs.end(); ++i) {
-            azSelected = *i;
-            if (strtod( azSelected.c_str(), NULL) == azId) {
+            azSelected =  strtod(  (*i).c_str(), NULL);
+            if ( azSelected == azId) {
                 return true;
+            }
+            else{ //if forwardZone is enable verify if is the Forward Zone
+                if (forwardZoneEnabled == true){
+                    if ( (azSelected - 1 == azId) or (azSelected + 1 == azId) or
+                         (azSelected - factorXY - 1 == azId) or (azSelected - factorXY + 1 == azId) or
+                         (azSelected + factorXY - 1 == azId) or (azSelected + factorXY + 1 == azId)){
+                        return true;
+                    }
+                }
             }
         }
     }
@@ -1038,26 +1032,82 @@ bool TraCIScenarioManager::isSelectedAz(double azId) {
 
 }
 
-bool TraCIScenarioManager::getExistCFinAZ(double azId){
+double TraCIScenarioManager::returnAzSelected(double azId) {
+//if forwardZone is enable, return the AzSelected correspondent about fowardedZone
+    double azSelected;
+    //First, verify if there as azID with same ID
+    for (std::list<std::string>::const_iterator i = roiAzs.begin(); i != roiAzs.end(); ++i) {
+        azSelected =  strtod(  (*i).c_str(), NULL);
 
-    if (AZsWithCF.find(azId) != AZsWithCF.end()){
+        if (azSelected == azId){
+            return azSelected;
+        }
+    }
+
+    //After, look for forwardedAZ and return azSelected
+    for (std::list<std::string>::const_iterator i = roiAzs.begin(); i != roiAzs.end(); ++i) {
+        azSelected =  strtod(  (*i).c_str(), NULL);
+
+        if (         (azSelected - 1 == azId) or (azSelected + 1 == azId) or
+                     (azSelected - factorXY - 1 == azId) or (azSelected - factorXY + 1 == azId) or
+                     (azSelected + factorXY - 1 == azId) or (azSelected + factorXY + 1 == azId)){
+            return azSelected;
+        }
+    }
+
+    return 0;
+
+
+}
+
+
+WaveShortMessage* TraCIScenarioManager::getExistFCinAZ(double azId){
+
+    auto search = listWsmFC.find(azId);
+    if (search != listWsmFC.end() ){
+        WaveShortMessage* teste = new WaveShortMessage(*search->second);
+        return teste;
+    }
+    return NULL;
+}
+
+
+
+
+bool TraCIScenarioManager::existFCinAZ(double azId){
+       /* std::map<int,char> example = {{1,'a'},{2,'b'}};
+
+        auto search = example.find(2);
+        if (search != example.end()) {
+            std::cout << "Found " << search->first << " " << search->second << '\n';
+        } else {
+            std::cout << "Not found\n";
+        }*/
+
+    if (AZsWithFC.find(azId) != AZsWithFC.end()){
         return true;
     }
     else{
         return false;
     }
 
-
-
 }
 
-void TraCIScenarioManager::setExistCFinAZ(double azId){
+void TraCIScenarioManager::setExistFCinAZ(double azId, WaveShortMessage *msg){
 
-    if (AZsWithCF.find(azId) == AZsWithCF.end()){
-        AZsWithCF.insert(azId);
+    if ( AZsWithFC.find(azId) == AZsWithFC.end() ){
+        WaveShortMessage* teste = new WaveShortMessage(*msg);
+        listWsmFC.insert ( std::pair<double,WaveShortMessage*>(azId,teste) );
+        //listWsmFC.insert(teste);
+        AZsWithFC.insert(azId);
+
     }
 
 }
 
+Coord TraCIScenarioManager::getLatLongIni(){ //by Massa
+    Coord loc(LongitudeIni, LatitudeIni, 0);
+    return loc;
 
+}
 

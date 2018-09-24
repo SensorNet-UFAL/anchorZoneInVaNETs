@@ -48,14 +48,14 @@ class TraCIAzApp : public BaseWaveApplLayer  {
 
         double currentAzSelected;
         double azIdOfWsm; //Anchor Zone ID of Float Content saved
-        WaveShortMessage* wsmFC;
+        //WaveShortMessage* wsmFC;
 
 
 	protected:
         virtual void initialize(int stage);
         virtual void handlePositionUpdate(cObject* obj);
         virtual void onWSM(WaveShortMessage* wsm);
-        virtual double getAzId(Coord currentPosition);
+        virtual double getAzId(Coord currentPosition, Coord positionGridIni, int factorXY,  double distmLong, double distmLat);
         virtual void finish();
 
 
